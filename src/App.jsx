@@ -128,36 +128,47 @@ export default function App() {
   const [runDurationMs, setRunDurationMs] = useState(null);
   const [complexityEstimate, setComplexityEstimate] = useState(null);
 
-  const employeesEndpoint = new URL('/employees.json', window.location.origin).href;
+  const employeesEndpoint = new URL('/employees/', window.location.origin).href;
+  const employeeOrigin = new URL(employeesEndpoint).origin;
+  const employeeByIdEndpoint = `${employeeOrigin}/employees/{id}/`;
   const employeeCodeSamples = {
     python: `from urllib.request import urlopen
 import json
 
-with urlopen("${employeesEndpoint}") as response:
-    employees = json.load(response)
+def get_employee(employee_id):
+    with urlopen(f"${employeeOrigin}/employees/{employee_id}/") as response:
+        return json.load(response)
 
-print(employees)`,
+employee = get_employee(1)
+print(employee)`,
     java: `import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.List;
 import java.util.Map;
 
-var request = HttpRequest.newBuilder()
-    .uri(URI.create("${employeesEndpoint}"))
-    .GET()
-    .build();
-var response = HttpClient.newHttpClient().send(
-    request, HttpResponse.BodyHandlers.ofString());
-if (response.statusCode() != 200) {
-    throw new IllegalStateException("Request failed: " + response.statusCode());
+public class EmployeeClient {
+    public static void main(String[] args) throws Exception {
+        System.out.println(getEmployee(1));
+    }
+
+    static Map<String, Object> getEmployee(int employeeId) throws Exception {
+        var request = HttpRequest.newBuilder()
+            .uri(URI.create("${employeeOrigin}/employees/" + employeeId + "/"))
+            .GET()
+            .build();
+        var response = HttpClient.newHttpClient().send(
+            request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException("Request failed: " + response.statusCode());
+        }
+        return new ObjectMapper().readValue(
+            response.body(), new TypeReference<Map<String, Object>>() {});
+    }
 }
-var employees = new ObjectMapper().readValue(
-    response.body(), new TypeReference<List<Map<String, Object>>>() {});
-System.out.println(employees);`,
+`,
     springboot: `import java.util.List;
 import java.util.Map;
 
@@ -177,7 +188,14 @@ public class EmployeeClient {
 
     public reactor.core.publisher.Mono<List<Map<String, Object>>> getEmployees() {
         return client.get()
-            .uri("/employees.json")
+            .uri("/employees/")
+            .retrieve()
+            .bodyToMono(new ParameterizedTypeReference<>() {});
+    }
+
+    public reactor.core.publisher.Mono<Map<String, Object>> getEmployee(int employeeId) {
+        return client.get()
+            .uri("/employees/{id}/", employeeId)
             .retrieve()
             .bodyToMono(new ParameterizedTypeReference<>() {});
     }
@@ -187,19 +205,256 @@ import httpx
 
 app = FastAPI()
 EMPLOYEES_URL = "${employeesEndpoint}"
+EMPLOYEE_URL = "${employeeOrigin}/employees"
 
-@app.get("/employees")
-async def get_employees():
+async def fetch_json(url):
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(EMPLOYEES_URL)
+            response = await client.get(url)
+            if response.status_code == 404:
+                raise HTTPException(status_code=404, detail="Employee not found")
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as error:
             raise HTTPException(
                 status_code=502,
                 detail="Could not fetch employee data",
-            ) from error`,
+            ) from error
+
+@app.get("/employees")
+async def get_employees():
+    return await fetch_json(EMPLOYEES_URL)
+
+@app.get("/employees/{employee_id}")
+async def get_employee(employee_id: int):
+    return await fetch_json(f"{EMPLOYEE_URL}/{employee_id}/")`,
+    csharp: `using System.Net.Http.Json;
+using System.Text.Json;
+
+using var client = new HttpClient();
+var employees = await client.GetFromJsonAsync<JsonElement[]>(
+    "${employeesEndpoint}");
+var employee = await client.GetFromJsonAsync<JsonElement>(
+    "${employeeOrigin}/employees/1/");
+
+Console.WriteLine(JsonSerializer.Serialize(employee, new JsonSerializerOptions
+{
+    WriteIndented = true
+}));`,
+    aspnetcore: `var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHttpClient("fakeEmployees", client =>
+    client.BaseAddress = new Uri("${employeeOrigin}"));
+
+var app = builder.Build();
+
+app.MapGet("/employees", async (IHttpClientFactory clients) =>
+{
+    var response = await clients.CreateClient("fakeEmployees")
+        .GetAsync("/employees/");
+    response.EnsureSuccessStatusCode();
+    return Results.Content(
+        await response.Content.ReadAsStringAsync(),
+        "application/json");
+});
+
+app.MapGet("/employees/{id:int}", async (int id, IHttpClientFactory clients) =>
+{
+    var response = await clients.CreateClient("fakeEmployees")
+        .GetAsync($"/employees/{id}/");
+    if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        return Results.NotFound();
+    response.EnsureSuccessStatusCode();
+    return Results.Content(
+        await response.Content.ReadAsStringAsync(),
+        "application/json");
+});
+
+app.Run();`,
+    nodejs: `const baseUrl = "${employeeOrigin}";
+
+async function getJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(\`Request failed: \${response.status}\`);
+  return response.json();
+}
+
+const employees = await getJson(\`\${baseUrl}/employees/\`);
+const employee = await getJson(\`\${baseUrl}/employees/1/\`);
+console.log({ employees, employee });`,
+    express: `import express from "express";
+
+const app = express();
+const baseUrl = "${employeeOrigin}";
+
+async function proxyJson(path, res) {
+  try {
+    const response = await fetch(\`\${baseUrl}\${path}\`);
+    if (!response.ok) return res.sendStatus(response.status);
+    return res.json(await response.json());
+  } catch {
+    return res.sendStatus(502);
+  }
+}
+
+app.get("/employees", (_req, res) => proxyJson("/employees/", res));
+app.get("/employees/:id", (req, res) =>
+  proxyJson(\`/employees/\${req.params.id}/\`, res));
+
+app.listen(3000);`,
+    go: `package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+const baseURL = "${employeeOrigin}"
+
+func getJSON(path string, target any) error {
+    response, err := http.Get(baseURL + path)
+    if err != nil {
+        return err
+    }
+    defer response.Body.Close()
+    if response.StatusCode != http.StatusOK {
+        return fmt.Errorf("request failed: %s", response.Status)
+    }
+    return json.NewDecoder(response.Body).Decode(target)
+}
+
+func main() {
+    var employees []map[string]any
+    var employee map[string]any
+    if err := getJSON("/employees/", &employees); err != nil {
+        panic(err)
+    }
+    if err := getJSON("/employees/1/", &employee); err != nil {
+        panic(err)
+    }
+    fmt.Println(employees, employee)
+}`,
+    gin: `package main
+
+import (
+    "encoding/json"
+    "net/http"
+
+    "github.com/gin-gonic/gin"
+)
+
+const baseURL = "${employeeOrigin}"
+
+func proxyJSON(path string, c *gin.Context) {
+    response, err := http.Get(baseURL + path)
+    if err != nil {
+        c.JSON(http.StatusBadGateway, gin.H{"error": "Could not fetch employees"})
+        return
+    }
+    defer response.Body.Close()
+    if response.StatusCode != http.StatusOK {
+        c.Status(response.StatusCode)
+        return
+    }
+    var data any
+    if err := json.NewDecoder(response.Body).Decode(&data); err != nil {
+        c.JSON(http.StatusBadGateway, gin.H{"error": "Invalid JSON response"})
+        return
+    }
+    c.JSON(http.StatusOK, data)
+}
+
+func main() {
+    router := gin.Default()
+    router.GET("/employees", func(c *gin.Context) {
+        proxyJSON("/employees/", c)
+    })
+    router.GET("/employees/:id", func(c *gin.Context) {
+        proxyJSON("/employees/"+c.Param("id")+"/", c)
+    })
+    router.Run(":8080")
+}`,
+    php: `<?php
+
+function getJson(string $url): array
+{
+    $handle = curl_init($url);
+    curl_setopt_array($handle, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+    ]);
+    $body = curl_exec($handle);
+    $status = curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+    if ($body === false || $status < 200 || $status >= 300) {
+        throw new RuntimeException("Request failed: HTTP $status");
+    }
+    curl_close($handle);
+    return json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+}
+
+$baseUrl = "${employeeOrigin}";
+$employees = getJson("$baseUrl/employees/");
+$employee = getJson("$baseUrl/employees/1/");
+print_r($employee);`,
+    laravel: `<?php
+
+namespace App\\Http\\Controllers;
+
+use Illuminate\\Support\\Facades\\Http;
+
+class EmployeeController extends Controller
+{
+    public function index()
+    {
+        return Http::get("${employeesEndpoint}")
+            ->throw()
+            ->json();
+    }
+
+    public function show(int $id)
+    {
+        return Http::get("${employeeOrigin}/employees/$id/")
+            ->throw()
+            ->json();
+    }
+}`,
+    ruby: `require "json"
+require "net/http"
+
+BASE_URL = "${employeeOrigin}"
+
+def get_json(path)
+  uri = URI("#{BASE_URL}#{path}")
+  response = Net::HTTP.get_response(uri)
+  raise "Request failed: #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+  JSON.parse(response.body)
+end
+
+employees = get_json("/employees/")
+employee = get_json("/employees/1/")
+puts employee`,
+    rails: `class EmployeesController < ApplicationController
+  def index
+    render json: fetch_json("${employeesEndpoint}")
+  end
+
+  def show
+    render json: fetch_json("${employeeOrigin}/employees/#{params[:id]}/")
+  end
+
+  private
+
+  def fetch_json(url)
+    response = Net::HTTP.get_response(URI(url))
+    unless response.is_a?(Net::HTTPSuccess)
+      return head(response.code.to_i)
+    end
+    JSON.parse(response.body)
+  rescue StandardError
+    render json: { error: "Could not fetch employee data" },
+           status: :bad_gateway
+  end
+end`,
   };
   const selectedEmployeeCode = employeeCodeSamples[employeeCodeLanguage];
   const stats = useMemo(() => ({
@@ -895,6 +1150,13 @@ async def get_employees():
               </a>
               <button className="text-button" onClick={copyEmployeeUrl}>Copy URL</button>
             </div>
+            <p className="fake-data-description">Get one employee by ID:</p>
+            <div className="fake-data-url">
+              <a href={`${employeeOrigin}/employees/1/`} target="_blank" rel="noopener noreferrer">
+                {employeeByIdEndpoint}
+              </a>
+              <span className="fake-data-count">IDs 1–10</span>
+            </div>
             {employeeUrlMessage && <p className="fake-data-copy-message" role="status">{employeeUrlMessage}</p>}
             <div className="fake-data-examples-heading">
               <h3>Consume this JSON</h3>
@@ -906,6 +1168,16 @@ async def get_employees():
                 ['java', 'Java'],
                 ['springboot', 'Spring Boot'],
                 ['fastapi', 'FastAPI'],
+                ['csharp', 'C# (.NET)'],
+                ['aspnetcore', 'ASP.NET Core'],
+                ['nodejs', 'Node.js'],
+                ['express', 'Express'],
+                ['go', 'Go'],
+                ['gin', 'Gin'],
+                ['php', 'PHP'],
+                ['laravel', 'Laravel'],
+                ['ruby', 'Ruby'],
+                ['rails', 'Rails'],
               ].map(([language, label]) => (
                 <button
                   className={`fake-data-language-button ${employeeCodeLanguage === language ? 'active' : ''}`}
@@ -925,9 +1197,11 @@ async def get_employees():
             <p className="fake-data-note">
               Java needs Jackson Databind. Spring Boot uses <code>spring-boot-starter-webflux</code> for WebClient; the method returns a reactive <code>Mono</code>.
               FastAPI exposes a local <code>/employees</code> route that fetches this data; install <code>fastapi</code> and <code>httpx</code>.
+              C# uses the built-in <code>System.Net.Http.Json</code> APIs. ASP.NET Core uses <code>IHttpClientFactory</code> to expose proxy endpoints.
+              Node.js uses built-in <code>fetch</code>; Express, Gin, Laravel, and Rails examples expose local proxy routes.
               The Python example uses only the standard library.
             </p>
-            <p className="fake-data-note">Read-only static JSON; it does not support POST, PUT, PATCH, DELETE, or server-side filtering. All records are fictional and use example.com email addresses.</p>
+            <p className="fake-data-note">Read-only static JSON. Use <code>/employees/</code> for the full list and <code>/employees/{'{id}'}/</code> for a single record; IDs 1–10 are available. It does not support POST, PUT, PATCH, DELETE, or server-side filtering. All records are fictional and use example.com email addresses.</p>
           </article>
         </section>
       ) : (
@@ -984,6 +1258,24 @@ async def get_employees():
                 sent to the configured online runner; do not submit sensitive information.
               </p>
             </details>
+          </section>
+          <section className="about-contact" aria-labelledby="about-contact-title">
+            <div className="about-contact-avatar" aria-hidden="true">SP</div>
+            <div className="about-contact-copy">
+              <span className="about-contact-label" id="about-contact-title">Created by</span>
+              <h2>Sanjay Patel</h2>
+              <p>Questions or feedback? Get in touch.</p>
+              <a className="about-contact-email" href="mailto:sanjaykpatel09@gmail.com">
+                sanjaykpatel09@gmail.com
+              </a>
+            </div>
+            <a className="about-contact-link" href="mailto:sanjaykpatel09@gmail.com">
+              <svg aria-hidden="true" viewBox="0 0 20 20">
+                <path d="M3.5 5.5h13v9h-13z" />
+                <path d="m4 6 6 5 6-5" />
+              </svg>
+              Email Sanjay
+            </a>
           </section>
         </section>
       )}

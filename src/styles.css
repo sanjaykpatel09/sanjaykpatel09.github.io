@@ -905,6 +905,104 @@ body {
   font-size: 13px;
 }
 
+.about-contact {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 28px 0 16px;
+  padding: 16px 18px;
+  border: 1px solid #e6e8f0;
+  border-radius: 12px;
+  background: linear-gradient(110deg, #fff 0%, #fbfaff 100%);
+  box-shadow: 0 5px 18px #25294a08;
+}
+
+.about-contact-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #e5e0ff;
+  border-radius: 13px;
+  color: #5748d5;
+  background: #f1efff;
+  font: 600 13px 'DM Sans', sans-serif;
+}
+
+.about-contact-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.about-contact-label {
+  display: block;
+  margin-bottom: 2px;
+  color: #8a8da2;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.about-contact-copy h2 {
+  margin: 0;
+  color: #30334a;
+  font-size: 15px;
+}
+
+.about-contact-copy p {
+  margin: 3px 0 0;
+  color: #777b91;
+  font-size: 11px;
+}
+
+.about-contact-email {
+  display: inline-block;
+  margin-top: 3px;
+  color: #5748d5;
+  font-size: 11px;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.about-contact-email:hover {
+  text-decoration: underline;
+}
+
+.about-contact-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #e2defb;
+  border-radius: 7px;
+  color: #5748d5;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .12s, border-color .12s;
+}
+
+.about-contact-link:hover {
+  border-color: #c9c1fa;
+  background: #f7f5ff;
+}
+
+.about-contact-link svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
 .compare-editors {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1166,6 +1264,27 @@ body {
 
   .about-intro p {
     font-size: 12px;
+  }
+
+  .about-contact {
+    gap: 10px;
+    padding: 13px;
+  }
+
+  .about-contact-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .about-contact-copy p {
+    font-size: 10px;
+  }
+
+  .about-contact-link {
+    min-height: 34px;
+    padding: 0 9px;
+    font-size: 10px;
   }
 
   .compare-workspace {

@@ -43,10 +43,11 @@ The GitHub Actions workflow automatically uses the root path for this `*.github.
 
 The site publishes a fixed, read-only JSON list of fictional employees for development and demos:
 
-- Netlify: <https://prettyjson2.netlify.app/employees.json>
-- GitHub Pages: <https://sanjaykpatel09.github.io/employees.json>
+- Netlify: <https://prettyjson2.netlify.app/employees/>
+- GitHub Pages: <https://sanjaykpatel09.github.io/employees/>
+- Example employee by ID: <https://prettyjson2.netlify.app/employees/1/>
 
-The **Fake(Json) Data** tab shows the URL for the current site and copyable Python, Java, Spring Boot, and FastAPI examples. The resource is a static file with cross-origin GET access enabled; it does not provide CRUD operations or server-side filtering.
+The **Fake(Json) Data** tab shows the URLs for the current site and copyable examples for Python/FastAPI, Java/Spring Boot, C#/.NET/ASP.NET Core, Node.js/Express, Go/Gin, PHP/Laravel, and Ruby/Rails. GET `/employees/` returns all employees, and GET `/employees/{id}/` returns one employee for IDs 1–10 (for example, `/employees/1/`). These are static files with cross-origin GET access enabled; they do not provide CRUD operations or server-side filtering.
 
 ## Deploy to Netlify
 
