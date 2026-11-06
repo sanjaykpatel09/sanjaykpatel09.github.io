@@ -72,17 +72,6 @@ const employeeRoutes = [
   ['GET', '/departments/', '8 departments'],
   ['GET', '/departments/1/', 'One department by ID'],
   ['GET', '/projects/', '10 projects'],
-  ['GET', '/projects/1/', 'One project by ID'],
-  ['GET', '/employees/1/projects/', 'Projects for employee 1'],
-  ['GET', '/tasks/', '11 employee tasks'],
-  ['GET', '/tasks/1/', 'One task by ID'],
-  ['GET', '/employees/1/tasks/', 'Tasks for employee 1'],
-  ['GET', '/locations/', '10 office locations'],
-  ['GET', '/locations/1/', 'One location by ID'],
-  ['GET', '/roles/', '10 employee roles'],
-  ['GET', '/roles/1/', 'One role by ID'],
-  ['GET', '/scott/employees/', 'Classic SCOTT sample: 14 employees'],
-  ['GET', '/scott/departments/', 'Classic SCOTT sample: 4 departments'],
 ];
 
 export default function FakeDataWorkspace({
@@ -119,7 +108,7 @@ export default function FakeDataWorkspace({
           </div>
           <span className="fake-data-count">10 records</span>
         </div>
-        <p className="fake-data-description">A fixed list of fictional employees with contact, role, department, location, start date, and status fields.</p>
+        <p className="fake-data-description">SCOTT sample employees enriched with IT designations, departments, and project assignments.</p>
         <div className="fake-data-url">
           <a href={employeesEndpoint} target="_blank" rel="noopener noreferrer">{employeesEndpoint}</a>
           <button
@@ -163,9 +152,6 @@ export default function FakeDataWorkspace({
               </div>
             ))}
           </div>
-          <p className="fake-data-route-limit">
-            POST <code>/employees/</code>, PUT/PATCH/DELETE <code>/employees/1/</code> are shown as common API patterns only; this static service supports GET requests and does not change data.
-          </p>
           <a className="fake-data-sql-link" href={`${employeeOrigin}/scott.sql`} download>
             Download PostgreSQL SCOTT schema SQL
           </a>

@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const projectRoot = fileURLToPath(new URL('.', import.meta.url));
-const staticJsonRoute = /^\/(?:employees(?:\/\d+(?:\/(?:projects|tasks))?)?|departments(?:\/\d+)?|projects(?:\/\d+)?|tasks(?:\/\d+)?|locations(?:\/\d+)?|roles(?:\/\d+)?|scott\/(?:employees|departments))\/?$/u;
+const staticJsonRoute = /^\/(?:employees(?:\/\d+)?|departments(?:\/1)?|projects)\/?$/u;
 
 function staticJsonRoutes() {
   const middleware = async (request, response, next) => {

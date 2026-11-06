@@ -718,9 +718,9 @@ end`,
   }
 
   return (
-    <main className="page" id="top">
+    <main className="page">
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="PrettyJSON home" onClick={() => setActiveTab('format')}><span className="brand-mark">{'{}'}</span> PrettyJSON</a>
+        <div className="brand"><span className="brand-mark">{'{}'}</span> PrettyJSON</div>
         <nav className="tabs" role="tablist" aria-label="Developer tools">
           <button
             className={`tab ${activeTab === 'format' ? 'active' : ''}`}
