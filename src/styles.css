@@ -200,6 +200,30 @@ body {
   border-bottom: 1px solid #eff0f5;
 }
 
+.format-panel-heading {
+  height: auto;
+  min-height: 58px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.load-example-button {
+  white-space: nowrap;
+}
+
+.load-example-button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+}
+
 .panel-heading > div:first-child,
 .output-actions {
   display: flex;
@@ -775,7 +799,6 @@ body {
 }
 
 .fake-data-description,
-.fake-data-note,
 .fake-data-copy-message {
   color: #777b91;
   font-size: 12px;
@@ -811,6 +834,86 @@ body {
 
 .fake-data-copy-message {
   margin: 8px 0 0;
+}
+
+.fake-data-routes {
+  margin-top: 24px;
+  border: 1px solid #e6e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fake-data-routes-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f8f8fc;
+  border-bottom: 1px solid #e6e8f0;
+}
+
+.fake-data-routes-heading h3,
+.fake-data-examples-heading h3 {
+  margin: 0;
+  color: #30334a;
+  font-size: 13px;
+}
+
+.fake-data-routes-heading > span,
+.fake-data-route-description,
+.fake-data-route-limit {
+  color: #777b91;
+  font-size: 11px;
+}
+
+.fake-data-route-list {
+  display: grid;
+}
+
+.fake-data-route {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) minmax(110px, auto);
+  align-items: center;
+  gap: 12px;
+  min-height: 39px;
+  padding: 6px 14px;
+  border-bottom: 1px solid #eff0f5;
+}
+
+.fake-data-route:last-child {
+  border-bottom: 0;
+}
+
+.fake-data-route a {
+  min-width: 0;
+  color: #5748d5;
+  text-decoration: none;
+}
+
+.fake-data-route a:hover {
+  text-decoration: underline;
+}
+
+.fake-data-route code,
+.fake-data-route-limit code {
+  font: 11px 'DM Mono', monospace;
+}
+
+.fake-data-route-limit {
+  margin: 0;
+  padding: 10px 14px;
+  line-height: 1.6;
+  background: #fbfbfe;
+  border-top: 1px solid #eff0f5;
+}
+
+.fake-data-sql-link {
+  display: inline-flex;
+  margin: 10px 14px 12px;
+  color: #5748d5;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .fake-data-examples-heading {
@@ -1016,15 +1119,6 @@ body {
   color: #999caf;
   background: #191b29;
   font: 9px 'DM Mono', monospace;
-}
-
-.fake-data-note {
-  margin: 14px 0 0;
-}
-
-.fake-data-note code {
-  color: #5748d5;
-  font: 11px 'DM Mono', monospace;
 }
 
 .about-intro {

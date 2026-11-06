@@ -21,9 +21,9 @@ export default function FormatWorkspace({
   return (
     <section className="workspace" id="format-panel" role="tabpanel" aria-labelledby="format-tab" aria-label="JSON formatter">
       <div className="panel">
-        <div className="panel-heading">
+        <div className="panel-heading format-panel-heading">
           <div><span className="step">01</span><h2>Input JSON</h2></div>
-          <button className="text-button icon-text-button" onClick={loadExample}>
+          <button className="text-button icon-text-button load-example-button" onClick={loadExample}>
             <svg aria-hidden="true" viewBox="0 0 16 16">
               <path d="M4.5 1.75h5l3 3v9.5h-8z" />
               <path d="M9.5 1.75v3h3M6.5 8.5l-1 1 1 1m3-2 1 1-1 1M8.75 8l-1.5 3" />

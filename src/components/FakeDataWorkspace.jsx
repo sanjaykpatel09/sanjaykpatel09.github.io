@@ -66,6 +66,25 @@ const languages = [
   ['rails', 'Rails'],
 ];
 
+const employeeRoutes = [
+  ['GET', '/employees/', '10 employees'],
+  ['GET', '/employees/1/', 'One employee by ID'],
+  ['GET', '/departments/', '8 departments'],
+  ['GET', '/departments/1/', 'One department by ID'],
+  ['GET', '/projects/', '10 projects'],
+  ['GET', '/projects/1/', 'One project by ID'],
+  ['GET', '/employees/1/projects/', 'Projects for employee 1'],
+  ['GET', '/tasks/', '11 employee tasks'],
+  ['GET', '/tasks/1/', 'One task by ID'],
+  ['GET', '/employees/1/tasks/', 'Tasks for employee 1'],
+  ['GET', '/locations/', '10 office locations'],
+  ['GET', '/locations/1/', 'One location by ID'],
+  ['GET', '/roles/', '10 employee roles'],
+  ['GET', '/roles/1/', 'One role by ID'],
+  ['GET', '/scott/employees/', 'Classic SCOTT sample: 14 employees'],
+  ['GET', '/scott/departments/', 'Classic SCOTT sample: 4 departments'],
+];
+
 export default function FakeDataWorkspace({
   employeesEndpoint,
   employeeOrigin,
@@ -128,6 +147,29 @@ export default function FakeDataWorkspace({
           </div>
         </div>
         {employeeUrlMessage && <p className="fake-data-copy-message" role="status">{employeeUrlMessage}</p>}
+        <div className="fake-data-routes">
+          <div className="fake-data-routes-heading">
+            <h3>Routes</h3>
+            <span>Static employee data for development</span>
+          </div>
+          <div className="fake-data-route-list">
+            {employeeRoutes.map(([method, path, description]) => (
+              <div className="fake-data-route" key={path}>
+                <span className="fake-data-method">{method}</span>
+                <a href={`${employeeOrigin}${path}`} target="_blank" rel="noopener noreferrer">
+                  <code>{path}</code>
+                </a>
+                <span className="fake-data-route-description">{description}</span>
+              </div>
+            ))}
+          </div>
+          <p className="fake-data-route-limit">
+            POST <code>/employees/</code>, PUT/PATCH/DELETE <code>/employees/1/</code> are shown as common API patterns only; this static service supports GET requests and does not change data.
+          </p>
+          <a className="fake-data-sql-link" href={`${employeeOrigin}/scott.sql`} download>
+            Download PostgreSQL SCOTT schema SQL
+          </a>
+        </div>
         <div className="fake-data-examples-heading">
           <h3>Consume this JSON</h3>
         </div>
@@ -186,16 +228,6 @@ export default function FakeDataWorkspace({
             <span>UTF-8</span>
           </div>
         </div>
-        <p className="fake-data-note">
-          Java needs Jackson Databind. Spring Boot uses <code>spring-boot-starter-webflux</code> for WebClient; the method returns a reactive <code>Mono</code>.
-          FastAPI exposes a local <code>/employees</code> route that fetches this data; install <code>fastapi</code> and <code>httpx</code>.
-          C# uses the built-in <code>System.Net.Http.Json</code> APIs. ASP.NET Core uses <code>IHttpClientFactory</code> to expose proxy endpoints.
-          Node.js uses built-in <code>fetch</code>; Express, Gin, Laravel, and Rails examples expose local proxy routes.
-          The Python example uses only the standard library.
-        </p>
-        <p className="fake-data-note">
-          Read-only static JSON. Use <code>/employees/</code> for the full list and <code>/employees/{'{id}'}/</code> for a single record; IDs 1–10 are available. It does not support POST, PUT, PATCH, DELETE, or server-side filtering. All records are fictional and use example.com email addresses.
-        </p>
       </article>
     </section>
   );

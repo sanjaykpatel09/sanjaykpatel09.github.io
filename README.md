@@ -41,13 +41,13 @@ The GitHub Actions workflow automatically uses the root path for this `*.github.
 
 ## Fake(Json) Data
 
-The site publishes a fixed, read-only JSON list of fictional employees for development and demos:
+The site publishes fixed, read-only JSON data about fictional employees and related workplace resources for development and demos:
 
 - Netlify: <https://prettyjson2.netlify.app/employees/>
 - GitHub Pages: <https://sanjaykpatel09.github.io/employees/>
 - Example employee by ID: <https://prettyjson2.netlify.app/employees/1/>
 
-The **Fake(Json) Data** tab shows the URLs for the current site and copyable examples for Python/FastAPI, Java/Spring Boot, C#/.NET/ASP.NET Core, Node.js/Express, Go/Gin, PHP/Laravel, and Ruby/Rails. GET `/employees/` returns all employees, and GET `/employees/{id}/` returns one employee for IDs 1–10 (for example, `/employees/1/`). These are static files with cross-origin GET access enabled; they do not provide CRUD operations or server-side filtering.
+The **Fake(Json) Data** tab lists routes and provides copyable client examples for Python/FastAPI, Java/Spring Boot, C#/.NET/ASP.NET Core, Node.js/Express, Go/Gin, PHP/Laravel, and Ruby/Rails. Available GET collections are `/employees/` (10), `/departments/` (8), `/projects/` (10), `/tasks/` (11), `/locations/` (10), and `/roles/` (10). GET `/employees/1/` returns one employee; `/employees/1/projects/` and `/employees/1/tasks/` return related resources for the sample employee. The classic SCOTT sample is available at `/scott/employees/` (14) and `/scott/departments/` (4), with a downloadable PostgreSQL-compatible `scott.sql` script that creates a separate `scott` schema containing `emp`, `dept`, `bonus`, and `salgrade`. These are static files with cross-origin GET access enabled; they do not provide CRUD operations or server-side filtering. POST, PUT, PATCH, and DELETE routes shown in the UI are illustrative only.
 
 ## Deploy to Netlify
 
