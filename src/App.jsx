@@ -36,6 +36,55 @@ const sourceFileExtensions = {
 };
 const javaRunnerUrl = import.meta.env.VITE_JAVA_RUNNER_URL;
 
+const employeeCodeFiles = {
+  python: 'employee_client.py',
+  java: 'EmployeeClient.java',
+  springboot: 'EmployeeClient.java',
+  fastapi: 'main.py',
+  csharp: 'EmployeeClient.cs',
+  aspnetcore: 'EmployeesController.cs',
+  nodejs: 'employee-client.js',
+  express: 'employees.js',
+  go: 'main.go',
+  gin: 'main.go',
+  php: 'employee-client.php',
+  laravel: 'EmployeeController.php',
+  ruby: 'employee_client.rb',
+  rails: 'employees_controller.rb',
+};
+
+const employeeCodeKeywords = new Set([
+  'async', 'await', 'break', 'class', 'const', 'def', 'else', 'export', 'extends',
+  'false', 'for', 'func', 'if', 'import', 'in', 'let', 'new', 'null', 'package',
+  'private', 'public', 'return', 'static', 'struct', 'this', 'throw', 'true', 'try',
+  'var', 'void', 'while', 'with',
+]);
+
+function renderEmployeeCodeLine(line) {
+  const tokenPattern = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/.*|#.*|\b\d+(?:\.\d+)?\b|\b[A-Za-z_$][\w$]*\b)/g;
+  const parts = [];
+  let lastIndex = 0;
+
+  for (const match of line.matchAll(tokenPattern)) {
+    const [token] = match;
+    const index = match.index;
+    if (index > lastIndex) parts.push(line.slice(lastIndex, index));
+
+    let tokenClass = '';
+    if (/^["'`]/.test(token)) tokenClass = 'string';
+    else if (/^(\/\/|#)/.test(token)) tokenClass = 'comment';
+    else if (/^\d/.test(token)) tokenClass = 'number';
+    else if (employeeCodeKeywords.has(token)) tokenClass = 'keyword';
+    else if (/^(print|println|printf|console|System|json|JSON|HttpClient|WebClient)$/.test(token)) tokenClass = 'function';
+
+    parts.push(tokenClass ? <span className={`token-${tokenClass}`} key={index}>{token}</span> : token);
+    lastIndex = index + token.length;
+  }
+
+  if (lastIndex < line.length) parts.push(line.slice(lastIndex));
+  return parts;
+}
+
 function formatRunDuration(durationMs) {
   return durationMs < 1000
     ? `${Math.round(durationMs)} ms`
@@ -457,6 +506,8 @@ puts employee`,
 end`,
   };
   const selectedEmployeeCode = employeeCodeSamples[employeeCodeLanguage];
+  const selectedEmployeeCodeFile = employeeCodeFiles[employeeCodeLanguage];
+  const selectedEmployeeCodeLines = selectedEmployeeCode.replace(/\n$/, '').split('\n');
   const stats = useMemo(() => ({
     chars: output.length,
     lines: output ? output.split('\n').length : 0,
@@ -1193,7 +1244,35 @@ end`,
                 </button>
               ))}
             </div>
-            <pre className="fake-data-code"><code>{selectedEmployeeCode}</code></pre>
+            <div className="fake-data-editor">
+              <div className="fake-data-editor-toolbar">
+                <span className="fake-data-editor-controls" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="fake-data-editor-file">
+                  <span className="fake-data-editor-file-icon" aria-hidden="true" />
+                  {selectedEmployeeCodeFile}
+                </span>
+                <span className="fake-data-editor-readonly">READ ONLY</span>
+              </div>
+              <pre className="fake-data-code" aria-label={`${selectedEmployeeCodeFile} code example`}>
+                <code>
+                  {selectedEmployeeCodeLines.map((line, index) => (
+                    <span className="fake-data-code-line" key={index}>
+                      <span className="fake-data-line-number" aria-hidden="true">{index + 1}</span>
+                      <span className="fake-data-line-content">{renderEmployeeCodeLine(line) || ' '}</span>
+                    </span>
+                  ))}
+                </code>
+              </pre>
+              <div className="fake-data-editor-status">
+                <span>{employeeCodeLanguage.toUpperCase()}</span>
+                <span>{selectedEmployeeCodeLines.length} lines</span>
+                <span>UTF-8</span>
+              </div>
+            </div>
             <p className="fake-data-note">
               Java needs Jackson Databind. Spring Boot uses <code>spring-boot-starter-webflux</code> for WebClient; the method returns a reactive <code>Mono</code>.
               FastAPI exposes a local <code>/employees</code> route that fetches this data; install <code>fastapi</code> and <code>httpx</code>.
