@@ -108,7 +108,6 @@ export default function FakeDataWorkspace({
           </div>
           <span className="fake-data-count">10 records</span>
         </div>
-        <p className="fake-data-description">SCOTT sample employees enriched with IT designations, departments, and project assignments.</p>
         <div className="fake-data-url">
           <a href={employeesEndpoint} target="_blank" rel="noopener noreferrer">{employeesEndpoint}</a>
           <button
