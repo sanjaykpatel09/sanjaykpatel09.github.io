@@ -1,158 +1,34 @@
-import React, { lazy, Suspense, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { estimateComplexity } from './complexity.js';
+import {
+  codeExamples,
+  codeRuntimes,
+  javaRunnerUrl,
+  postExample,
+  sourceFileExtensions,
+  sourceFileNames,
+} from './data/codeRunner.js';
+import AboutWorkspace from './components/AboutWorkspace.jsx';
+import CodeWorkspace from './components/CodeWorkspace.jsx';
+import CompareWorkspace from './components/CompareWorkspace.jsx';
+import CountWorkspace from './components/CountWorkspace.jsx';
+import FakeDataWorkspace from './components/FakeDataWorkspace.jsx';
+import FormatWorkspace from './components/FormatWorkspace.jsx';
+import collectDifferences from './utils/collectDifferences.js';
 
-const CodeEditor = lazy(() => import('./CodeEditor.jsx'));
-
-const codeExamples = {
-  python: 'print("Hello, world!")\n',
-  java: 'class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, world!");\n    }\n}\n',
-  cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, world!" << std::endl;\n    return 0;\n}\n',
-  javascript: 'console.log("Hello, world!");\n',
-  csharp: 'using System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine("Hello, world!");\n    }\n}\n',
+const pageTitles = {
+  format: 'JSON Formatter & Validator',
+  compare: 'Compare JSON',
+  count: 'Character Counter',
+  code: 'Online Code Runner',
+  'fake-data': 'Fake JSON Data',
+  about: 'About',
 };
-
-const codeRuntimes = {
-  python: { compiler: 'cpython-3.13.8' },
-  java: { compiler: 'openjdk-jdk-22+36' },
-  cpp: { compiler: 'gcc-13.2.0' },
-  javascript: { compiler: 'nodejs-20.17.0' },
-  csharp: { compiler: 'mono-6.12.0.199' },
-};
-
-const sourceFileNames = {
-  python: 'main.py',
-  java: 'Main.java',
-  cpp: 'main.cpp',
-  javascript: 'main.js',
-  csharp: 'Program.cs',
-};
-
-const sourceFileExtensions = {
-  python: '.py',
-  java: '.java',
-  cpp: '.cpp',
-  javascript: '.js',
-  csharp: '.cs',
-};
-const javaRunnerUrl = import.meta.env.VITE_JAVA_RUNNER_URL;
-
-const employeeCodeFiles = {
-  python: 'employee_client.py',
-  java: 'EmployeeClient.java',
-  springboot: 'EmployeeClient.java',
-  fastapi: 'main.py',
-  csharp: 'EmployeeClient.cs',
-  aspnetcore: 'EmployeesController.cs',
-  nodejs: 'employee-client.js',
-  express: 'employees.js',
-  go: 'main.go',
-  gin: 'main.go',
-  php: 'employee-client.php',
-  laravel: 'EmployeeController.php',
-  ruby: 'employee_client.rb',
-  rails: 'employees_controller.rb',
-};
-
-const employeeCodeKeywords = new Set([
-  'async', 'await', 'break', 'class', 'const', 'def', 'else', 'export', 'extends',
-  'false', 'for', 'func', 'if', 'import', 'in', 'let', 'new', 'null', 'package',
-  'private', 'public', 'return', 'static', 'struct', 'this', 'throw', 'true', 'try',
-  'var', 'void', 'while', 'with',
-]);
-
-function renderEmployeeCodeLine(line) {
-  const tokenPattern = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/.*|#.*|\b\d+(?:\.\d+)?\b|\b[A-Za-z_$][\w$]*\b)/g;
-  const parts = [];
-  let lastIndex = 0;
-
-  for (const match of line.matchAll(tokenPattern)) {
-    const [token] = match;
-    const index = match.index;
-    if (index > lastIndex) parts.push(line.slice(lastIndex, index));
-
-    let tokenClass = '';
-    if (/^["'`]/.test(token)) tokenClass = 'string';
-    else if (/^(\/\/|#)/.test(token)) tokenClass = 'comment';
-    else if (/^\d/.test(token)) tokenClass = 'number';
-    else if (employeeCodeKeywords.has(token)) tokenClass = 'keyword';
-    else if (/^(print|println|printf|console|System|json|JSON|HttpClient|WebClient)$/.test(token)) tokenClass = 'function';
-
-    parts.push(tokenClass ? <span className={`token-${tokenClass}`} key={index}>{token}</span> : token);
-    lastIndex = index + token.length;
-  }
-
-  if (lastIndex < line.length) parts.push(line.slice(lastIndex));
-  return parts;
-}
-
-function formatRunDuration(durationMs) {
-  return durationMs < 1000
-    ? `${Math.round(durationMs)} ms`
-    : `${(durationMs / 1000).toFixed(2)} s`;
-}
-
-const example = JSON.stringify({
-  userId: 1,
-  id: 1,
-  title: 'sunt aut facere repellat provident occaecati excepturi optio reprehenderit',
-  body: 'quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto',
-});
-
-function collectDifferences(left, right, path = '$', differences = []) {
-  const leftIsArray = Array.isArray(left);
-  const rightIsArray = Array.isArray(right);
-
-  if (leftIsArray !== rightIsArray) {
-    differences.push({ path, left, right });
-    return differences;
-  }
-
-  if (leftIsArray) {
-    const length = Math.max(left.length, right.length);
-    for (let index = 0; index < length; index += 1) {
-      const itemPath = `${path}[${index}]`;
-      if (index >= left.length) {
-        differences.push({ path: itemPath, right: right[index] });
-      } else if (index >= right.length) {
-        differences.push({ path: itemPath, left: left[index] });
-      } else {
-        collectDifferences(left[index], right[index], itemPath, differences);
-      }
-    }
-    return differences;
-  }
-
-  const leftIsObject = left !== null && typeof left === 'object';
-  const rightIsObject = right !== null && typeof right === 'object';
-  if (leftIsObject !== rightIsObject || !leftIsObject) {
-    if (!Object.is(left, right)) differences.push({ path, left, right });
-    return differences;
-  }
-
-  const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort();
-  for (const key of keys) {
-    const itemPath = `${path}[${JSON.stringify(key)}]`;
-    const hasLeft = Object.hasOwn(left, key);
-    const hasRight = Object.hasOwn(right, key);
-    if (!hasLeft) {
-      differences.push({ path: itemPath, right: right[key] });
-    } else if (!hasRight) {
-      differences.push({ path: itemPath, left: left[key] });
-    } else {
-      collectDifferences(left[key], right[key], itemPath, differences);
-    }
-  }
-
-  return differences;
-}
-
-function formatDifferenceValue(value, exists) {
-  return exists ? JSON.stringify(value, null, 2) : 'Missing';
-}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('format');
   const [employeeUrlMessage, setEmployeeUrlMessage] = useState('');
+  const [employeeCodeMessage, setEmployeeCodeMessage] = useState('');
   const [employeeCodeLanguage, setEmployeeCodeLanguage] = useState('python');
   const [countText, setCountText] = useState('');
   const [input, setInput] = useState('');
@@ -176,6 +52,10 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [runDurationMs, setRunDurationMs] = useState(null);
   const [complexityEstimate, setComplexityEstimate] = useState(null);
+
+  useEffect(() => {
+    document.title = `${pageTitles[activeTab]} | PrettyJSON`;
+  }, [activeTab]);
 
   const employeesEndpoint = new URL('/employees/', window.location.origin).href;
   const employeeOrigin = new URL(employeesEndpoint).origin;
@@ -506,8 +386,6 @@ puts employee`,
 end`,
   };
   const selectedEmployeeCode = employeeCodeSamples[employeeCodeLanguage];
-  const selectedEmployeeCodeFile = employeeCodeFiles[employeeCodeLanguage];
-  const selectedEmployeeCodeLines = selectedEmployeeCode.replace(/\n$/, '').split('\n');
   const stats = useMemo(() => ({
     chars: output.length,
     lines: output ? output.split('\n').length : 0,
@@ -595,9 +473,9 @@ end`,
     }
   }
 
-  async function copyEmployeeUrl() {
+  async function copyEmployeeUrl(url) {
     try {
-      await navigator.clipboard.writeText(employeesEndpoint);
+      await navigator.clipboard.writeText(url);
       setEmployeeUrlMessage('URL copied to clipboard.');
     } catch {
       setEmployeeUrlMessage('Could not access the clipboard. Select and copy the URL.');
@@ -607,9 +485,9 @@ end`,
   async function copyEmployeeCode() {
     try {
       await navigator.clipboard.writeText(selectedEmployeeCode);
-      setEmployeeUrlMessage('Code copied to clipboard.');
+      setEmployeeCodeMessage('Code copied to clipboard.');
     } catch {
-      setEmployeeUrlMessage('Could not access the clipboard. Select and copy the code.');
+      setEmployeeCodeMessage('Could not access the clipboard. Select and copy the code.');
     }
   }
 
@@ -660,7 +538,7 @@ end`,
   }
 
   function loadExample() {
-    updateJsonInput(example);
+    updateJsonInput(postExample);
   }
 
   function clearAll() {
@@ -917,446 +795,78 @@ end`,
         </nav>
       </header>
 
-      {activeTab === 'format' ? <section className="workspace" id="format-panel" role="tabpanel" aria-labelledby="format-tab" aria-label="JSON formatter">
-        <div className="panel">
-          <div className="panel-heading">
-            <div><span className="step">01</span><h2>Input JSON</h2></div>
-            <button className="text-button icon-text-button" onClick={loadExample}>
-              <svg aria-hidden="true" viewBox="0 0 16 16">
-                <path d="M4.5 1.75h5l3 3v9.5h-8z" />
-                <path d="M9.5 1.75v3h3M6.5 8.5l-1 1 1 1m3-2 1 1-1 1M8.75 8l-1.5 3" />
-              </svg>
-              Load post example
-            </button>
-          </div>
-          <textarea
-            aria-label="Input JSON"
-            spellCheck="false"
-            value={input}
-            onChange={(event) => updateJsonInput(event.target.value)}
-            placeholder={'Paste your JSON here…\n\n{"hello":"world"}'}
-          />
-          <div className="panel-footer"><span>{input.length.toLocaleString()} characters</span><button className="text-button muted" onClick={clearAll}>Clear</button></div>
-        </div>
-
-        <div className="actions" aria-label="JSON actions">
-          <button className="primary-button" onClick={formatJson}><span>✦</span> Format JSON</button>
-          <button className="secondary-button" onClick={minifyJson}>Minify</button>
-          <button className="secondary-button" onClick={validateJson}>Validate</button>
-        </div>
-
-        <div className="panel output-panel">
-          <div className="panel-heading">
-            <div className="output-title">
-              <span className="step">02</span>
-              <h2>Output</h2>
-              <label className="visually-hidden" htmlFor="download-filename">Download file name</label>
-              <input
-                className="filename-input"
-                id="download-filename"
-                type="text"
-                value={fileName}
-                onChange={(event) => setFileName(event.target.value)}
-                aria-describedby="filename-hint"
-              />
-              <span className="visually-hidden" id="filename-hint">The .json extension is added if omitted.</span>
-            </div>
-            <div className="output-actions">
-              <button className="text-button icon-text-button" onClick={copyOutput} disabled={!output}>
-                <svg aria-hidden="true" viewBox="0 0 16 16">
-                  <rect x="5.25" y="5.25" width="8.5" height="9" rx="1.25" />
-                  <path d="M10.75 5.25v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h1.5" />
-                </svg>
-                Copy
-              </button>
-              <button className="text-button icon-text-button" onClick={downloadOutput} disabled={!output}>
-                <svg aria-hidden="true" viewBox="0 0 16 16">
-                  <path d="M8 1.75v8m0 0 3-3m-3 3-3-3M2.25 10.5v2.25a1 1 0 0 0 1 1h9.5a1 1 0 0 0 1-1V10.5" />
-                </svg>
-                Download
-              </button>
-            </div>
-          </div>
-          <textarea
-            aria-label="Formatted JSON output"
-            spellCheck="false"
-            value={output}
-            onChange={(event) => setOutput(event.target.value)}
-            placeholder="Your result will appear here…"
-          />
-          {output && <div className="panel-footer output-stats"><span>{stats.lines} lines</span><span>{stats.chars.toLocaleString()} characters</span></div>}
-          <div className={`status ${kind}`} role="status"><span className="status-icon">{kind === 'success' ? '✓' : kind === 'error' ? '!' : 'i'}</span>{message}</div>
-        </div>
-      </section> : activeTab === 'compare' ? (
-        <section className="compare-workspace" id="compare-panel" role="tabpanel" aria-labelledby="compare-tab" aria-label="Compare JSON">
-          <div className="compare-editors">
-            <div className="panel compare-editor">
-              <div className="panel-heading">
-                <div><span className="step">A</span><h2>Original JSON</h2></div>
-              </div>
-              <textarea
-                aria-label="Original JSON"
-                spellCheck="false"
-                value={leftJson}
-                onChange={(event) => updateCompareInput(setLeftJson, event.target.value)}
-                placeholder={'Paste the original JSON here…\n\n{"hello":"world"}'}
-              />
-              <div className="panel-footer"><span>{leftJson.length.toLocaleString()} characters</span></div>
-            </div>
-            <div className="panel compare-editor">
-              <div className="panel-heading">
-                <div><span className="step">B</span><h2>Modified JSON</h2></div>
-              </div>
-              <textarea
-                aria-label="Modified JSON"
-                spellCheck="false"
-                value={rightJson}
-                onChange={(event) => updateCompareInput(setRightJson, event.target.value)}
-                placeholder={'Paste the modified JSON here…\n\n{"hello":"there"}'}
-              />
-              <div className="panel-footer"><span>{rightJson.length.toLocaleString()} characters</span></div>
-            </div>
-          </div>
-          <div className="compare-controls">
-            <button className="primary-button" onClick={compareJson}>Compare JSON</button>
-            <div className={`status ${compareKind}`} role="status">
-              <span className="status-icon">{compareKind === 'success' ? '✓' : compareKind === 'error' ? '!' : 'i'}</span>
-              {compareMessage}
-            </div>
-          </div>
-          <div className="panel differences-panel">
-            <div className="panel-heading">
-              <div><span className="step">{comparison?.length ?? '—'}</span><h2>Differences</h2></div>
-            </div>
-            {comparison && comparison.length > 0 ? (
-              <div className="differences-list">
-                {comparison.map((difference) => (
-                  <article className="difference" key={difference.path}>
-                    <code className="difference-path">{difference.path}</code>
-                    <div className="difference-values">
-                      <pre className={Object.hasOwn(difference, 'left') ? 'changed-value' : 'missing-value'}>
-                        <span>Original</span>
-                        {formatDifferenceValue(difference.left, Object.hasOwn(difference, 'left'))}
-                      </pre>
-                      <pre className={Object.hasOwn(difference, 'right') ? 'changed-value' : 'missing-value'}>
-                        <span>Modified</span>
-                        {formatDifferenceValue(difference.right, Object.hasOwn(difference, 'right'))}
-                      </pre>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="empty-differences">
-                {comparison ? 'No differences found.' : 'Compare the JSON values to see changes here.'}
-              </p>
-            )}
-          </div>
-        </section>
+      {activeTab === 'format' ? (
+        <FormatWorkspace
+          input={input}
+          output={output}
+          fileName={fileName}
+          stats={stats}
+          kind={kind}
+          message={message}
+          updateJsonInput={updateJsonInput}
+          loadExample={loadExample}
+          clearAll={clearAll}
+          formatJson={formatJson}
+          minifyJson={minifyJson}
+          validateJson={validateJson}
+          setFileName={setFileName}
+          copyOutput={copyOutput}
+          downloadOutput={downloadOutput}
+          setOutput={setOutput}
+        />
+      ) : activeTab === 'compare' ? (
+        <CompareWorkspace
+          leftJson={leftJson}
+          rightJson={rightJson}
+          comparison={comparison}
+          compareMessage={compareMessage}
+          compareKind={compareKind}
+          setLeftJson={setLeftJson}
+          setRightJson={setRightJson}
+          updateCompareInput={updateCompareInput}
+          compareJson={compareJson}
+        />
       ) : activeTab === 'count' ? (
-        <section className="count-workspace" id="count-panel" role="tabpanel" aria-labelledby="count-tab" aria-label="Count characters">
-          <div className="panel count-panel">
-            <div className="panel-heading">
-              <div><span className="step">Aa</span><h2>Text to count</h2></div>
-              <button className="text-button muted" onClick={() => setCountText('')}>Clear</button>
-            </div>
-            <textarea
-              aria-label="Text to count"
-              value={countText}
-              onChange={(event) => setCountText(event.target.value)}
-              placeholder="Type or paste text here…"
-            />
-          </div>
-          <div className="count-summary" aria-live="polite">
-            <div className="count-card"><span>Characters</span><strong>{textStats.characters.toLocaleString()}</strong></div>
-            <div className="count-card"><span>Without whitespace</span><strong>{textStats.charactersWithoutWhitespace.toLocaleString()}</strong></div>
-            <div className="count-card"><span>Words</span><strong>{textStats.words.toLocaleString()}</strong></div>
-            <div className="count-card"><span>Lines</span><strong>{textStats.lines.toLocaleString()}</strong></div>
-          </div>
-        </section>
+        <CountWorkspace countText={countText} setCountText={setCountText} textStats={textStats} />
       ) : activeTab === 'code' ? (
-        <section className="code-workspace" id="code-panel" role="tabpanel" aria-labelledby="code-tab" aria-label="Online code runner">
-          <div className="code-editors">
-            <div className="panel code-editor">
-              <div className="panel-heading">
-                <div><span className="step">01</span><h2>Program</h2></div>
-                <div className="code-header-controls">
-                  <label className="visually-hidden" htmlFor="code-language">Language</label>
-                  <select id="code-language" className="language-select" value={codeLanguage} onChange={changeCodeLanguage}>
-                    <option value="python">Python 3.13</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
-                    <option value="javascript">JavaScript</option>
-                    <option value="csharp">C#</option>
-                  </select>
-                  <div className="code-file-controls">
-                    <label className="visually-hidden" htmlFor="source-filename">Source file name</label>
-                    <input
-                      className="source-filename-input"
-                      id="source-filename"
-                      type="text"
-                      value={sourceFileName}
-                      onChange={(event) => setSourceFileName(event.target.value)}
-                      aria-label="Source file name"
-                    />
-                    <button className="text-button" onClick={downloadSourceCode} disabled={!code.trim()}>Download</button>
-                    <button className="primary-button code-run-button" onClick={runCode} disabled={isRunning || !code.trim()}>
-                      {isRunning ? 'Running…' : 'Run Program'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <Suspense fallback={<div className="editor-loading">Loading code editor…</div>}>
-                <CodeEditor
-                  language={codeLanguage}
-                  code={code}
-                  onChange={(value) => {
-                    setCode(value);
-                    setRunDurationMs(null);
-                    setComplexityEstimate(null);
-                  }}
-                />
-              </Suspense>
-            </div>
-            <div className="code-side">
-              <div className="panel stdin-panel">
-                <div className="panel-heading">
-                  <div><span className="step">02</span><h2>Input (stdin)</h2></div>
-                </div>
-                <textarea
-                  aria-label="Program input"
-                  spellCheck="false"
-                  value={stdin}
-                  onChange={(event) => {
-                    setStdin(event.target.value);
-                    setRunDurationMs(null);
-                  }}
-                  placeholder="Optional input passed to your program…"
-                />
-              </div>
-              <div className="panel program-output-panel">
-                <div className="panel-heading">
-                  <div><span className="step">03</span><h2>Output</h2></div>
-                </div>
-                <pre className="program-output" aria-live="polite">{programOutput || 'Your program output will appear here…'}</pre>
-              </div>
-            </div>
-          </div>
-          <div className="run-controls">
-            <a
-              className="secondary-button external-runner-link"
-              href={codeLanguage === 'java' && javaRunnerUrl ? 'https://www.jdoodle.com/online-java-compiler' : 'https://wandbox.org/'}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {codeLanguage === 'java' && javaRunnerUrl ? 'Open JDoodle' : 'Open Wandbox'}
-            </a>
-            <div className={`status ${runKind}`} role="status">
-              <span className="status-icon">{runKind === 'success' ? '✓' : runKind === 'error' ? '!' : 'i'}</span>
-              {runMessage}
-            </div>
-          </div>
-          <div className="run-metrics" aria-label="Run metrics and complexity">
-            <div className="run-metric">
-              <span>Compile + execution</span>
-              <strong>{runDurationMs === null ? (isRunning ? 'Running…' : '—') : formatRunDuration(runDurationMs)}</strong>
-              <small>Browser-measured total time</small>
-            </div>
-            <div className="run-metric">
-              <span>Time complexity</span>
-              <strong>{complexityEstimate?.time ?? (isRunning ? 'Analyzing…' : 'Run to analyze')}</strong>
-              <small>Static heuristic estimate</small>
-            </div>
-            <div className="run-metric">
-              <span>Space complexity</span>
-              <strong>{complexityEstimate?.space ?? (isRunning ? 'Analyzing…' : 'Run to analyze')}</strong>
-              <small>Static heuristic estimate</small>
-            </div>
-          </div>
-          <p className="runner-disclosure">
-            Big-O values are rough local estimates based on loop nesting and common collection allocations; recursion and complex control flow may not be detected. Elapsed time includes network and runner startup. {javaRunnerUrl ? 'Java code and stdin are sent through your configured JDoodle runner; other languages are sent to Wandbox; ' : 'Code and stdin are sent to Wandbox; '}do not submit passwords, API keys, or other sensitive information.
-          </p>
-        </section>
+        <CodeWorkspace
+          codeLanguage={codeLanguage}
+          code={code}
+          sourceFileName={sourceFileName}
+          stdin={stdin}
+          programOutput={programOutput}
+          runMessage={runMessage}
+          runKind={runKind}
+          isRunning={isRunning}
+          runDurationMs={runDurationMs}
+          complexityEstimate={complexityEstimate}
+          javaRunnerUrl={javaRunnerUrl}
+          setSourceFileName={setSourceFileName}
+          downloadSourceCode={downloadSourceCode}
+          runCode={runCode}
+          setCode={setCode}
+          setRunDurationMs={setRunDurationMs}
+          setComplexityEstimate={setComplexityEstimate}
+          setStdin={setStdin}
+          changeCodeLanguage={changeCodeLanguage}
+        />
       ) : activeTab === 'fake-data' ? (
-        <section className="fake-data-workspace" id="fake-data-panel" role="tabpanel" aria-labelledby="fake-data-tab">
-          <div className="about-intro">
-            <span className="about-mark">{'{ }'}</span>
-            <div>
-              <h2>Fake(Json) Data</h2>
-              <p>Free sample JSON for prototypes, demos, and development.</p>
-            </div>
-          </div>
-          <article className="fake-data-card">
-            <div className="fake-data-card-heading">
-              <div>
-                <span className="fake-data-method">GET</span>
-                <h3>Employees</h3>
-              </div>
-              <span className="fake-data-count">10 records</span>
-            </div>
-            <p className="fake-data-description">A fixed list of fictional employees with contact, role, department, location, start date, and status fields.</p>
-            <div className="fake-data-url">
-              <a href={employeesEndpoint} target="_blank" rel="noopener noreferrer">
-                {employeesEndpoint}
-              </a>
-              <button className="text-button" onClick={copyEmployeeUrl}>Copy URL</button>
-            </div>
-            <p className="fake-data-description">Get one employee by ID:</p>
-            <div className="fake-data-url">
-              <a href={`${employeeOrigin}/employees/1/`} target="_blank" rel="noopener noreferrer">
-                {employeeByIdEndpoint}
-              </a>
-              <span className="fake-data-count">IDs 1–10</span>
-            </div>
-            {employeeUrlMessage && <p className="fake-data-copy-message" role="status">{employeeUrlMessage}</p>}
-            <div className="fake-data-examples-heading">
-              <h3>Consume this JSON</h3>
-              <button className="text-button" onClick={copyEmployeeCode}>Copy code</button>
-            </div>
-            <div className="fake-data-languages" aria-label="Code example language">
-              {[
-                ['python', 'Python'],
-                ['java', 'Java'],
-                ['springboot', 'Spring Boot'],
-                ['fastapi', 'FastAPI'],
-                ['csharp', 'C# (.NET)'],
-                ['aspnetcore', 'ASP.NET Core'],
-                ['nodejs', 'Node.js'],
-                ['express', 'Express'],
-                ['go', 'Go'],
-                ['gin', 'Gin'],
-                ['php', 'PHP'],
-                ['laravel', 'Laravel'],
-                ['ruby', 'Ruby'],
-                ['rails', 'Rails'],
-              ].map(([language, label]) => (
-                <button
-                  className={`fake-data-language-button ${employeeCodeLanguage === language ? 'active' : ''}`}
-                  key={language}
-                  type="button"
-                  aria-pressed={employeeCodeLanguage === language}
-                  onClick={() => {
-                    setEmployeeCodeLanguage(language);
-                    setEmployeeUrlMessage('');
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="fake-data-editor">
-              <div className="fake-data-editor-toolbar">
-                <span className="fake-data-editor-controls" aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                </span>
-                <span className="fake-data-editor-file">
-                  <span className="fake-data-editor-file-icon" aria-hidden="true" />
-                  {selectedEmployeeCodeFile}
-                </span>
-                <span className="fake-data-editor-readonly">READ ONLY</span>
-              </div>
-              <pre className="fake-data-code" aria-label={`${selectedEmployeeCodeFile} code example`}>
-                <code>
-                  {selectedEmployeeCodeLines.map((line, index) => (
-                    <span className="fake-data-code-line" key={index}>
-                      <span className="fake-data-line-number" aria-hidden="true">{index + 1}</span>
-                      <span className="fake-data-line-content">{renderEmployeeCodeLine(line) || ' '}</span>
-                    </span>
-                  ))}
-                </code>
-              </pre>
-              <div className="fake-data-editor-status">
-                <span>{employeeCodeLanguage.toUpperCase()}</span>
-                <span>{selectedEmployeeCodeLines.length} lines</span>
-                <span>UTF-8</span>
-              </div>
-            </div>
-            <p className="fake-data-note">
-              Java needs Jackson Databind. Spring Boot uses <code>spring-boot-starter-webflux</code> for WebClient; the method returns a reactive <code>Mono</code>.
-              FastAPI exposes a local <code>/employees</code> route that fetches this data; install <code>fastapi</code> and <code>httpx</code>.
-              C# uses the built-in <code>System.Net.Http.Json</code> APIs. ASP.NET Core uses <code>IHttpClientFactory</code> to expose proxy endpoints.
-              Node.js uses built-in <code>fetch</code>; Express, Gin, Laravel, and Rails examples expose local proxy routes.
-              The Python example uses only the standard library.
-            </p>
-            <p className="fake-data-note">Read-only static JSON. Use <code>/employees/</code> for the full list and <code>/employees/{'{id}'}/</code> for a single record; IDs 1–10 are available. It does not support POST, PUT, PATCH, DELETE, or server-side filtering. All records are fictional and use example.com email addresses.</p>
-          </article>
-        </section>
+        <FakeDataWorkspace
+          employeesEndpoint={employeesEndpoint}
+          employeeOrigin={employeeOrigin}
+          employeeByIdEndpoint={employeeByIdEndpoint}
+          employeeUrlMessage={employeeUrlMessage}
+          employeeCodeMessage={employeeCodeMessage}
+          employeeCodeLanguage={employeeCodeLanguage}
+          selectedEmployeeCode={selectedEmployeeCode}
+          copyEmployeeUrl={copyEmployeeUrl}
+          copyEmployeeCode={copyEmployeeCode}
+          setEmployeeCodeLanguage={setEmployeeCodeLanguage}
+          setEmployeeUrlMessage={setEmployeeUrlMessage}
+          setEmployeeCodeMessage={setEmployeeCodeMessage}
+        />
       ) : (
-        <section className="about-workspace" id="about-panel" role="tabpanel" aria-labelledby="about-tab">
-          <div className="about-intro">
-            <span className="about-mark">{'{}'}</span>
-            <div>
-              <h2>About PrettyJSON</h2>
-              <p>A simple set of tools for working with JSON and text.</p>
-            </div>
-          </div>
-          <section className="search-content" aria-labelledby="search-content-title">
-            <h2 id="search-content-title">What you can do</h2>
-            <div className="search-content-features">
-              <article>
-                <h2>Format, minify, and validate JSON</h2>
-                <p>
-                  Paste JSON to format it with readable indentation, minify it into compact JSON, or
-                  check whether the input is valid. Copy the result or download it as a JSON file.
-                </p>
-              </article>
-              <article>
-                <h2>Compare two JSON documents</h2>
-                <p>
-                  Compare original and modified JSON side by side. PrettyJSON reports changed,
-                  added, and missing values by path, while ignoring object key order.
-                </p>
-              </article>
-              <article>
-                <h2>Count characters and words</h2>
-                <p>
-                  Count characters, characters without whitespace, words, and lines in pasted or
-                  typed text.
-                </p>
-              </article>
-              <article>
-                <h2>Run code online</h2>
-                <p>
-                  Write Python, Java, C++, JavaScript, and C# programs, provide standard input, and
-                  run them online. Code and input are sent to an online runner; do not submit
-                  sensitive information.
-                </p>
-              </article>
-            </div>
-            <h2>Frequently asked questions</h2>
-            <details>
-              <summary>Is PrettyJSON free to use?</summary>
-              <p>Yes. PrettyJSON is free to use in your browser without creating an account.</p>
-            </details>
-            <details>
-              <summary>Is my JSON uploaded or stored?</summary>
-              <p>
-                JSON formatting and comparison happen in your browser. Code and standard input are
-                sent to the configured online runner; do not submit sensitive information.
-              </p>
-            </details>
-          </section>
-          <section className="about-contact" aria-labelledby="about-contact-title">
-            <div className="about-contact-avatar" aria-hidden="true">SP</div>
-            <div className="about-contact-copy">
-              <span className="about-contact-label" id="about-contact-title">Created by</span>
-              <h2>Sanjay Patel</h2>
-              <p>Questions or feedback? Get in touch.</p>
-              <a className="about-contact-email" href="mailto:sanjaykpatel09@gmail.com">
-                sanjaykpatel09@gmail.com
-              </a>
-            </div>
-            <a className="about-contact-link" href="mailto:sanjaykpatel09@gmail.com">
-              <svg aria-hidden="true" viewBox="0 0 20 20">
-                <path d="M3.5 5.5h13v9h-13z" />
-                <path d="m4 6 6 5 6-5" />
-              </svg>
-              Email Sanjay
-            </a>
-          </section>
-        </section>
+        <AboutWorkspace />
       )}
 
     </main>
