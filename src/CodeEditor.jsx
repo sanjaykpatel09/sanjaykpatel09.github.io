@@ -1,9 +1,23 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
-import { java } from '@codemirror/lang-java';
-import { python } from '@codemirror/lang-python';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
+
+const languageExtensionLoaders = {
+  python: () => import('@codemirror/lang-python').then(({ python }) => python()),
+  java: () => import('@codemirror/lang-java').then(({ java }) => java()),
+  cpp: () => import('@codemirror/lang-cpp').then(({ cpp }) => cpp()),
+  javascript: () => import('@codemirror/lang-javascript').then(({ javascript }) => javascript()),
+  csharp: () => import('@replit/codemirror-lang-csharp').then(({ csharp }) => csharp()),
+};
+
+const languageLabels = {
+  python: 'Python',
+  java: 'Java',
+  cpp: 'C++',
+  javascript: 'JavaScript',
+  csharp: 'C#',
+};
 
 const codeHighlighting = HighlightStyle.define([
   { tag: [tags.keyword, tags.controlKeyword, tags.definitionKeyword, tags.moduleKeyword], color: '#8b45c6', fontWeight: '600' },
@@ -17,28 +31,56 @@ const codeHighlighting = HighlightStyle.define([
 ]);
 
 export default function CodeEditor({ language, code, onChange }) {
+  const [languageExtension, setLanguageExtension] = useState(null);
+  const [languageLoadFailed, setLanguageLoadFailed] = useState(false);
+
+  useEffect(() => {
+    let isCurrentLanguage = true;
+    setLanguageExtension(null);
+    setLanguageLoadFailed(false);
+
+    languageExtensionLoaders[language]()
+      .then((extension) => {
+        if (isCurrentLanguage) setLanguageExtension(extension);
+      })
+      .catch(() => {
+        if (isCurrentLanguage) setLanguageLoadFailed(true);
+      });
+
+    return () => {
+      isCurrentLanguage = false;
+    };
+  }, [language]);
+
   const extensions = useMemo(
     () => [
-      language === 'python' ? python() : java(),
+      ...(languageExtension ? [languageExtension] : []),
       syntaxHighlighting(codeHighlighting),
     ],
-    [language],
+    [languageExtension],
   );
 
   return (
-    <CodeMirror
-      className="source-code-editor"
-      aria-label={`${language === 'python' ? 'Python' : 'Java'} source code`}
-      value={code}
-      onChange={onChange}
-      extensions={extensions}
-      basicSetup={{
-        lineNumbers: true,
-        foldGutter: true,
-        highlightActiveLine: true,
-        highlightActiveLineGutter: true,
-        tabSize: 4,
-      }}
-    />
+    <>
+      {languageLoadFailed && (
+        <div className="editor-language-warning" role="status">
+          {languageLabels[language]} syntax highlighting could not be loaded. You can still edit and run your code.
+        </div>
+      )}
+      <CodeMirror
+        className="source-code-editor"
+        aria-label={`${languageLabels[language]} source code`}
+        value={code}
+        onChange={onChange}
+        extensions={extensions}
+        basicSetup={{
+          lineNumbers: true,
+          foldGutter: true,
+          highlightActiveLine: true,
+          highlightActiveLineGutter: true,
+          tabSize: 4,
+        }}
+      />
+    </>
   );
 }

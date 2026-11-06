@@ -1,0 +1,152 @@
+[
+  {
+    "id": 1,
+    "firstName": "Avery",
+    "lastName": "Morgan",
+    "email": "avery.morgan@example.com",
+    "phone": "+1-202-555-0101",
+    "jobTitle": "Frontend Developer",
+    "department": "Engineering",
+    "location": {
+      "city": "Portland",
+      "country": "United States"
+    },
+    "startDate": "2022-04-18",
+    "status": "active"
+  },
+  {
+    "id": 2,
+    "firstName": "Jordan",
+    "lastName": "Kim",
+    "email": "jordan.kim@example.com",
+    "phone": "+1-202-555-0102",
+    "jobTitle": "Product Designer",
+    "department": "Design",
+    "location": {
+      "city": "Toronto",
+      "country": "Canada"
+    },
+    "startDate": "2021-09-06",
+    "status": "active"
+  },
+  {
+    "id": 3,
+    "firstName": "Riley",
+    "lastName": "Patel",
+    "email": "riley.patel@example.com",
+    "phone": "+1-202-555-0103",
+    "jobTitle": "Data Analyst",
+    "department": "Analytics",
+    "location": {
+      "city": "Austin",
+      "country": "United States"
+    },
+    "startDate": "2023-01-23",
+    "status": "active"
+  },
+  {
+    "id": 4,
+    "firstName": "Casey",
+    "lastName": "Reed",
+    "email": "casey.reed@example.com",
+    "phone": "+1-202-555-0104",
+    "jobTitle": "Engineering Manager",
+    "department": "Engineering",
+    "location": {
+      "city": "Dublin",
+      "country": "Ireland"
+    },
+    "startDate": "2019-06-10",
+    "status": "active"
+  },
+  {
+    "id": 5,
+    "firstName": "Taylor",
+    "lastName": "Nguyen",
+    "email": "taylor.nguyen@example.com",
+    "phone": "+1-202-555-0105",
+    "jobTitle": "Customer Support Specialist",
+    "department": "Support",
+    "location": {
+      "city": "Melbourne",
+      "country": "Australia"
+    },
+    "startDate": "2022-11-14",
+    "status": "on-leave"
+  },
+  {
+    "id": 6,
+    "firstName": "Morgan",
+    "lastName": "Garcia",
+    "email": "morgan.garcia@example.com",
+    "phone": "+1-202-555-0106",
+    "jobTitle": "Marketing Manager",
+    "department": "Marketing",
+    "location": {
+      "city": "Madrid",
+      "country": "Spain"
+    },
+    "startDate": "2020-03-02",
+    "status": "active"
+  },
+  {
+    "id": 7,
+    "firstName": "Quinn",
+    "lastName": "Brooks",
+    "email": "quinn.brooks@example.com",
+    "phone": "+1-202-555-0107",
+    "jobTitle": "Account Executive",
+    "department": "Sales",
+    "location": {
+      "city": "Chicago",
+      "country": "United States"
+    },
+    "startDate": "2023-07-17",
+    "status": "active"
+  },
+  {
+    "id": 8,
+    "firstName": "Drew",
+    "lastName": "Wilson",
+    "email": "drew.wilson@example.com",
+    "phone": "+1-202-555-0108",
+    "jobTitle": "People Operations Partner",
+    "department": "People",
+    "location": {
+      "city": "London",
+      "country": "United Kingdom"
+    },
+    "startDate": "2021-02-08",
+    "status": "active"
+  },
+  {
+    "id": 9,
+    "firstName": "Skyler",
+    "lastName": "Chen",
+    "email": "skyler.chen@example.com",
+    "phone": "+1-202-555-0109",
+    "jobTitle": "QA Engineer",
+    "department": "Engineering",
+    "location": {
+      "city": "Vancouver",
+      "country": "Canada"
+    },
+    "startDate": "2024-01-15",
+    "status": "active"
+  },
+  {
+    "id": 10,
+    "firstName": "Jamie",
+    "lastName": "Okafor",
+    "email": "jamie.okafor@example.com",
+    "phone": "+1-202-555-0110",
+    "jobTitle": "Finance Associate",
+    "department": "Finance",
+    "location": {
+      "city": "Lagos",
+      "country": "Nigeria"
+    },
+    "startDate": "2022-08-29",
+    "status": "inactive"
+  }
+]

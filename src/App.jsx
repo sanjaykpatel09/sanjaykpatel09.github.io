@@ -6,11 +6,33 @@ const CodeEditor = lazy(() => import('./CodeEditor.jsx'));
 const codeExamples = {
   python: 'print("Hello, world!")\n',
   java: 'class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, world!");\n    }\n}\n',
+  cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, world!" << std::endl;\n    return 0;\n}\n',
+  javascript: 'console.log("Hello, world!");\n',
+  csharp: 'using System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine("Hello, world!");\n    }\n}\n',
 };
 
 const codeRuntimes = {
   python: { compiler: 'cpython-3.13.8' },
   java: { compiler: 'openjdk-jdk-22+36' },
+  cpp: { compiler: 'gcc-13.2.0' },
+  javascript: { compiler: 'nodejs-20.17.0' },
+  csharp: { compiler: 'mono-6.12.0.199' },
+};
+
+const sourceFileNames = {
+  python: 'main.py',
+  java: 'Main.java',
+  cpp: 'main.cpp',
+  javascript: 'main.js',
+  csharp: 'Program.cs',
+};
+
+const sourceFileExtensions = {
+  python: '.py',
+  java: '.java',
+  cpp: '.cpp',
+  javascript: '.js',
+  csharp: '.cs',
 };
 const javaRunnerUrl = import.meta.env.VITE_JAVA_RUNNER_URL;
 
@@ -81,6 +103,8 @@ function formatDifferenceValue(value, exists) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('format');
+  const [employeeUrlMessage, setEmployeeUrlMessage] = useState('');
+  const [employeeCodeLanguage, setEmployeeCodeLanguage] = useState('python');
   const [countText, setCountText] = useState('');
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
@@ -92,10 +116,10 @@ export default function App() {
   const [comparison, setComparison] = useState(null);
   const [compareMessage, setCompareMessage] = useState('Enter two JSON values and compare them.');
   const [compareKind, setCompareKind] = useState('info');
-  const [codeLanguage, setCodeLanguage] = useState('java');
+  const [codeLanguage, setCodeLanguage] = useState('python');
   const [javaVersion, setJavaVersion] = useState(javaRunnerUrl ? '8' : '22');
-  const [code, setCode] = useState(codeExamples.java);
-  const [sourceFileName, setSourceFileName] = useState('Main.java');
+  const [code, setCode] = useState(codeExamples.python);
+  const [sourceFileName, setSourceFileName] = useState(sourceFileNames.python);
   const [stdin, setStdin] = useState('');
   const [programOutput, setProgramOutput] = useState('');
   const [runMessage, setRunMessage] = useState('Ready to run your program.');
@@ -104,6 +128,80 @@ export default function App() {
   const [runDurationMs, setRunDurationMs] = useState(null);
   const [complexityEstimate, setComplexityEstimate] = useState(null);
 
+  const employeesEndpoint = new URL('/employees.json', window.location.origin).href;
+  const employeeCodeSamples = {
+    python: `from urllib.request import urlopen
+import json
+
+with urlopen("${employeesEndpoint}") as response:
+    employees = json.load(response)
+
+print(employees)`,
+    java: `import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.Map;
+
+var request = HttpRequest.newBuilder()
+    .uri(URI.create("${employeesEndpoint}"))
+    .GET()
+    .build();
+var response = HttpClient.newHttpClient().send(
+    request, HttpResponse.BodyHandlers.ofString());
+if (response.statusCode() != 200) {
+    throw new IllegalStateException("Request failed: " + response.statusCode());
+}
+var employees = new ObjectMapper().readValue(
+    response.body(), new TypeReference<List<Map<String, Object>>>() {});
+System.out.println(employees);`,
+    springboot: `import java.util.List;
+import java.util.Map;
+
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+@Service
+public class EmployeeClient {
+    private final WebClient client;
+
+    public EmployeeClient(WebClient.Builder builder) {
+        this.client = builder
+            .baseUrl("${new URL(employeesEndpoint).origin}")
+            .build();
+    }
+
+    public reactor.core.publisher.Mono<List<Map<String, Object>>> getEmployees() {
+        return client.get()
+            .uri("/employees.json")
+            .retrieve()
+            .bodyToMono(new ParameterizedTypeReference<>() {});
+    }
+}`,
+    fastapi: `from fastapi import FastAPI, HTTPException
+import httpx
+
+app = FastAPI()
+EMPLOYEES_URL = "${employeesEndpoint}"
+
+@app.get("/employees")
+async def get_employees():
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(EMPLOYEES_URL)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as error:
+            raise HTTPException(
+                status_code=502,
+                detail="Could not fetch employee data",
+            ) from error`,
+  };
+  const selectedEmployeeCode = employeeCodeSamples[employeeCodeLanguage];
   const stats = useMemo(() => ({
     chars: output.length,
     lines: output ? output.split('\n').length : 0,
@@ -119,6 +217,28 @@ export default function App() {
   function parseInput() {
     if (!input.trim()) throw new Error('Enter some JSON first.');
     return JSON.parse(input);
+  }
+
+  function updateJsonInput(value) {
+    setInput(value);
+
+    if (!value.trim()) {
+      setOutput('');
+      setMessage('Paste JSON or load the example to get started.');
+      setKind('info');
+      return;
+    }
+
+    try {
+      const result = JSON.stringify(JSON.parse(value), null, 2);
+      setOutput(result);
+      setMessage('Valid JSON — formatted with 2-space indentation.');
+      setKind('success');
+    } catch (error) {
+      setOutput('');
+      setMessage(error instanceof SyntaxError ? `Invalid JSON: ${error.message}` : error.message);
+      setKind('error');
+    }
   }
 
   function formatJson() {
@@ -169,6 +289,24 @@ export default function App() {
     }
   }
 
+  async function copyEmployeeUrl() {
+    try {
+      await navigator.clipboard.writeText(employeesEndpoint);
+      setEmployeeUrlMessage('URL copied to clipboard.');
+    } catch {
+      setEmployeeUrlMessage('Could not access the clipboard. Select and copy the URL.');
+    }
+  }
+
+  async function copyEmployeeCode() {
+    try {
+      await navigator.clipboard.writeText(selectedEmployeeCode);
+      setEmployeeUrlMessage('Code copied to clipboard.');
+    } catch {
+      setEmployeeUrlMessage('Could not access the clipboard. Select and copy the code.');
+    }
+  }
+
   function downloadOutput() {
     if (!output) return;
     const trimmedFileName = fileName.trim();
@@ -200,9 +338,9 @@ export default function App() {
       return;
     }
 
-    const extension = codeLanguage === 'python' ? '.py' : '.java';
-    const downloadName = /\.(?:py|java)$/iu.test(sanitizedName)
-      ? sanitizedName.replace(/\.(?:py|java)$/iu, extension)
+    const extension = sourceFileExtensions[codeLanguage];
+    const downloadName = /\.(?:py|java|cpp|js|cs)$/iu.test(sanitizedName)
+      ? sanitizedName.replace(/\.(?:py|java|cpp|js|cs)$/iu, extension)
       : `${sanitizedName}${extension}`;
     const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -216,17 +354,11 @@ export default function App() {
   }
 
   function loadExample() {
-    setInput(example);
-    setOutput('');
-    setMessage('JSONPlaceholder post example loaded. Choose Format, Minify, or Validate.');
-    setKind('info');
+    updateJsonInput(example);
   }
 
   function clearAll() {
-    setInput('');
-    setOutput('');
-    setMessage('Paste JSON or load the example to get started.');
-    setKind('info');
+    updateJsonInput('');
   }
 
   function compareJson() {
@@ -393,7 +525,7 @@ export default function App() {
     const language = event.target.value;
     setCodeLanguage(language);
     setCode(codeExamples[language]);
-    setSourceFileName(language === 'python' ? 'main.py' : 'Main.java');
+    setSourceFileName(sourceFileNames[language]);
     setProgramOutput('');
     setRunDurationMs(null);
     setComplexityEstimate(null);
@@ -453,6 +585,18 @@ export default function App() {
             <span className="tab-label-compact">Code</span>
           </button>
           <button
+            className={`tab ${activeTab === 'fake-data' ? 'active' : ''}`}
+            id="fake-data-tab"
+            role="tab"
+            aria-selected={activeTab === 'fake-data'}
+            aria-controls="fake-data-panel"
+            aria-label="Fake(Json) Data"
+            onClick={() => setActiveTab('fake-data')}
+          >
+            <span className="tab-label-wide">Fake(Json) Data</span>
+            <span className="tab-label-compact">Data</span>
+          </button>
+          <button
             className={`tab ${activeTab === 'about' ? 'active' : ''}`}
             id="about-tab"
             role="tab"
@@ -483,7 +627,7 @@ export default function App() {
             aria-label="Input JSON"
             spellCheck="false"
             value={input}
-            onChange={(event) => setInput(event.target.value)}
+            onChange={(event) => updateJsonInput(event.target.value)}
             placeholder={'Paste your JSON here…\n\n{"hello":"world"}'}
           />
           <div className="panel-footer"><span>{input.length.toLocaleString()} characters</span><button className="text-button muted" onClick={clearAll}>Clear</button></div>
@@ -630,55 +774,31 @@ export default function App() {
             <div className="panel code-editor">
               <div className="panel-heading">
                 <div><span className="step">01</span><h2>Program</h2></div>
-                <div className="code-file-controls">
-                  <label className="visually-hidden" htmlFor="source-filename">Source file name</label>
-                  <input
-                    className="source-filename-input"
-                    id="source-filename"
-                    type="text"
-                    value={sourceFileName}
-                    onChange={(event) => setSourceFileName(event.target.value)}
-                    aria-label="Source file name"
-                  />
-                  <button className="text-button" onClick={downloadSourceCode} disabled={!code.trim()}>Download</button>
-                  <button className="primary-button compact-button" onClick={runCode} disabled={isRunning || !code.trim()}>
-                    {isRunning ? 'Running…' : '▶ Run Program'}
-                  </button>
+                <div className="code-header-controls">
+                  <label className="visually-hidden" htmlFor="code-language">Language</label>
+                  <select id="code-language" className="language-select" value={codeLanguage} onChange={changeCodeLanguage}>
+                    <option value="python">Python 3.13</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="csharp">C#</option>
+                  </select>
+                  <div className="code-file-controls">
+                    <label className="visually-hidden" htmlFor="source-filename">Source file name</label>
+                    <input
+                      className="source-filename-input"
+                      id="source-filename"
+                      type="text"
+                      value={sourceFileName}
+                      onChange={(event) => setSourceFileName(event.target.value)}
+                      aria-label="Source file name"
+                    />
+                    <button className="text-button" onClick={downloadSourceCode} disabled={!code.trim()}>Download</button>
+                    <button className="primary-button code-run-button" onClick={runCode} disabled={isRunning || !code.trim()}>
+                      {isRunning ? 'Running…' : 'Run Program'}
+                    </button>
+                  </div>
                 </div>
-                <label className="language-select-label" htmlFor="code-language">Language</label>
-                <select id="code-language" className="language-select" value={codeLanguage} onChange={changeCodeLanguage}>
-                  <option value="java">Java</option>
-                  <option value="python">Python 3.13</option>
-                </select>
-                {codeLanguage === 'java' && (
-                  <>
-                    <label className="language-select-label" htmlFor="java-version">Java Version</label>
-                    <select
-                      id="java-version"
-                      className="language-select"
-                      value={javaVersion}
-                      onChange={(event) => {
-                        setJavaVersion(event.target.value);
-                        setProgramOutput('');
-                        setRunDurationMs(null);
-                        setComplexityEstimate(null);
-                        setRunMessage('Ready to run your program.');
-                        setRunKind('info');
-                      }}
-                    >
-                      {javaRunnerUrl ? (
-                        <>
-                          <option value="8">Java 8</option>
-                          <option value="11">Java 11</option>
-                          <option value="17">Java 17</option>
-                          <option value="22">Java 22</option>
-                        </>
-                      ) : (
-                        <option value="22">Java 22 (Wandbox)</option>
-                      )}
-                    </select>
-                  </>
-                )}
               </div>
               <Suspense fallback={<div className="editor-loading">Loading code editor…</div>}>
                 <CodeEditor
@@ -719,11 +839,11 @@ export default function App() {
           <div className="run-controls">
             <a
               className="secondary-button external-runner-link"
-              href="https://www.jdoodle.com/online-java-compiler"
+              href={codeLanguage === 'java' && javaRunnerUrl ? 'https://www.jdoodle.com/online-java-compiler' : 'https://wandbox.org/'}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Open JDoodle
+              {codeLanguage === 'java' && javaRunnerUrl ? 'Open JDoodle' : 'Open Wandbox'}
             </a>
             <div className={`status ${runKind}`} role="status">
               <span className="status-icon">{runKind === 'success' ? '✓' : runKind === 'error' ? '!' : 'i'}</span>
@@ -748,8 +868,67 @@ export default function App() {
             </div>
           </div>
           <p className="runner-disclosure">
-            Big-O values are rough local estimates based on loop nesting and common collection allocations; recursion and complex control flow may not be detected. Elapsed time includes network and runner startup. {javaRunnerUrl ? 'Java code and stdin are sent through your configured JDoodle runner; ' : 'Java 22 and Python code and stdin are sent to Wandbox; '}do not submit passwords, API keys, or other sensitive information.
+            Big-O values are rough local estimates based on loop nesting and common collection allocations; recursion and complex control flow may not be detected. Elapsed time includes network and runner startup. {javaRunnerUrl ? 'Java code and stdin are sent through your configured JDoodle runner; other languages are sent to Wandbox; ' : 'Code and stdin are sent to Wandbox; '}do not submit passwords, API keys, or other sensitive information.
           </p>
+        </section>
+      ) : activeTab === 'fake-data' ? (
+        <section className="fake-data-workspace" id="fake-data-panel" role="tabpanel" aria-labelledby="fake-data-tab">
+          <div className="about-intro">
+            <span className="about-mark">{'{ }'}</span>
+            <div>
+              <h2>Fake(Json) Data</h2>
+              <p>Free sample JSON for prototypes, demos, and development.</p>
+            </div>
+          </div>
+          <article className="fake-data-card">
+            <div className="fake-data-card-heading">
+              <div>
+                <span className="fake-data-method">GET</span>
+                <h3>Employees</h3>
+              </div>
+              <span className="fake-data-count">10 records</span>
+            </div>
+            <p className="fake-data-description">A fixed list of fictional employees with contact, role, department, location, start date, and status fields.</p>
+            <div className="fake-data-url">
+              <a href={employeesEndpoint} target="_blank" rel="noopener noreferrer">
+                {employeesEndpoint}
+              </a>
+              <button className="text-button" onClick={copyEmployeeUrl}>Copy URL</button>
+            </div>
+            {employeeUrlMessage && <p className="fake-data-copy-message" role="status">{employeeUrlMessage}</p>}
+            <div className="fake-data-examples-heading">
+              <h3>Consume this JSON</h3>
+              <button className="text-button" onClick={copyEmployeeCode}>Copy code</button>
+            </div>
+            <div className="fake-data-languages" aria-label="Code example language">
+              {[
+                ['python', 'Python'],
+                ['java', 'Java'],
+                ['springboot', 'Spring Boot'],
+                ['fastapi', 'FastAPI'],
+              ].map(([language, label]) => (
+                <button
+                  className={`fake-data-language-button ${employeeCodeLanguage === language ? 'active' : ''}`}
+                  key={language}
+                  type="button"
+                  aria-pressed={employeeCodeLanguage === language}
+                  onClick={() => {
+                    setEmployeeCodeLanguage(language);
+                    setEmployeeUrlMessage('');
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <pre className="fake-data-code"><code>{selectedEmployeeCode}</code></pre>
+            <p className="fake-data-note">
+              Java needs Jackson Databind. Spring Boot uses <code>spring-boot-starter-webflux</code> for WebClient; the method returns a reactive <code>Mono</code>.
+              FastAPI exposes a local <code>/employees</code> route that fetches this data; install <code>fastapi</code> and <code>httpx</code>.
+              The Python example uses only the standard library.
+            </p>
+            <p className="fake-data-note">Read-only static JSON; it does not support POST, PUT, PATCH, DELETE, or server-side filtering. All records are fictional and use example.com email addresses.</p>
+          </article>
         </section>
       ) : (
         <section className="about-workspace" id="about-panel" role="tabpanel" aria-labelledby="about-tab">
@@ -760,29 +939,52 @@ export default function App() {
               <p>A simple set of tools for working with JSON and text.</p>
             </div>
           </div>
-          <div className="about-features">
-            <article className="about-card">
-              <span className="about-card-icon">{'{ }'}</span>
-              <h2>Format, minify &amp; validate</h2>
-              <p>Make JSON easier to read, compact it for use, or check that it is valid. Copy the result or download it with your chosen file name.</p>
-            </article>
-            <article className="about-card">
-              <span className="about-card-icon">A ↔ B</span>
-              <h2>Compare JSON</h2>
-              <p>Compare two JSON values and see changed, added, or missing values by path. Object key order does not affect the comparison.</p>
-            </article>
-            <article className="about-card">
-              <span className="about-card-icon">Aa</span>
-              <h2>Count characters</h2>
-              <p>Count characters, characters without whitespace, words, and lines as you type or paste text.</p>
-            </article>
-            <article className="about-card">
-              <span className="about-card-icon">&gt;_</span>
-              <h2>Run Java &amp; Python</h2>
-              <p>{javaRunnerUrl ? 'Write a program, provide optional standard input, and run it online with Java 8, 11, 17, or 22, or Python 3.13.' : 'Write a program, provide optional standard input, and run it online with Java 22 or Python 3.13.'}</p>
-            </article>
-          </div>
-          <p className="about-note">JSON and text tools run in your browser. {javaRunnerUrl ? 'Java code is sent through your configured JDoodle runner and Python code to Wandbox' : 'Code and program input are sent to Wandbox'}; do not submit secrets.</p>
+          <section className="search-content" aria-labelledby="search-content-title">
+            <h2 id="search-content-title">What you can do</h2>
+            <div className="search-content-features">
+              <article>
+                <h2>Format, minify, and validate JSON</h2>
+                <p>
+                  Paste JSON to format it with readable indentation, minify it into compact JSON, or
+                  check whether the input is valid. Copy the result or download it as a JSON file.
+                </p>
+              </article>
+              <article>
+                <h2>Compare two JSON documents</h2>
+                <p>
+                  Compare original and modified JSON side by side. PrettyJSON reports changed,
+                  added, and missing values by path, while ignoring object key order.
+                </p>
+              </article>
+              <article>
+                <h2>Count characters and words</h2>
+                <p>
+                  Count characters, characters without whitespace, words, and lines in pasted or
+                  typed text.
+                </p>
+              </article>
+              <article>
+                <h2>Run code online</h2>
+                <p>
+                  Write Python, Java, C++, JavaScript, and C# programs, provide standard input, and
+                  run them online. Code and input are sent to an online runner; do not submit
+                  sensitive information.
+                </p>
+              </article>
+            </div>
+            <h2>Frequently asked questions</h2>
+            <details>
+              <summary>Is PrettyJSON free to use?</summary>
+              <p>Yes. PrettyJSON is free to use in your browser without creating an account.</p>
+            </details>
+            <details>
+              <summary>Is my JSON uploaded or stored?</summary>
+              <p>
+                JSON formatting and comparison happen in your browser. Code and standard input are
+                sent to the configured online runner; do not submit sensitive information.
+              </p>
+            </details>
+          </section>
         </section>
       )}
 

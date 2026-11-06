@@ -39,6 +39,15 @@ This project is published at <https://sanjaykpatel09.github.io/> from the `sanja
 
 The GitHub Actions workflow automatically uses the root path for this `*.github.io` repository.
 
+## Fake(Json) Data
+
+The site publishes a fixed, read-only JSON list of fictional employees for development and demos:
+
+- Netlify: <https://prettyjson2.netlify.app/employees.json>
+- GitHub Pages: <https://sanjaykpatel09.github.io/employees.json>
+
+The **Fake(Json) Data** tab shows the URL for the current site and copyable Python, Java, Spring Boot, and FastAPI examples. The resource is a static file with cross-origin GET access enabled; it does not provide CRUD operations or server-side filtering.
+
 ## Deploy to Netlify
 
 This project is also published at <https://prettyjson2.netlify.app/>. Netlify is connected to the same GitHub repository and automatically deploys changes pushed to `main`.
